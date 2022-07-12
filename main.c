@@ -196,30 +196,57 @@ void deleteContactBook(struct ContactBook *book) {      // deletes all entries a
     book = NULL;
 }
 
+int saveContactBook(struct ContactBook *book, const char *filename) {  // save all entries to txt file
+    if (book == NULL || filename == NULL) return 1;
+    FILE *f = fopen(filename, "w");
+    if (f == NULL) return 2;
+    struct Contact *temp = book->head;
+    while (temp != NULL) {
+        fprintf(f, "%s|%s|%s|%s\n", temp->firstName, temp->lastName, temp->phoneNumber, temp->email);
+        temp = temp->next;
+    }
+    fclose(f);
+    return 0;
+}
+
+struct ContactBook *loadContactBook(const char *filename) {  // load entries from txt file and create a new book
+    if (filename == NULL) return NULL;
+    FILE *f = fopen(filename, "r");
+    if (f == NULL) return NULL;
+    struct ContactBook *book = initContactBook();
+    char fName[100], lName[100], phone[15], email[50];
+    while (!feof(f)) {
+        int res = fscanf(f, "%[^|]|%[^|]|%[^|]|%[^\n]\n", fName, lName, phone, email);
+        if (res != 4) break;
+        addContact(book, createContact(fName, lName, phone, email));
+    }
+    fclose(f);
+    return book;
+}
+
 int main() {
     printf("Contacts management system. List of commands available below: ");
     struct ContactBook *book = initContactBook();
+
     while (1) {
-        puts("\n0 - list all commands.\n1 - add entry to contact book.\n2 - delete entry from contact book.\n3 - list all entries from phone book.\n9 - close.\n");
+        puts("\n[0] - LIST ALL COMMANDS.\t[1] - ADD NEW ENTRY.\n[2] - DELETE ENTRY.\t\t[3] - PRINT ALL CONTACTS.\n[4] - SAVE TO FILE.\t\t[5] - LOAD FROM FILE.\n[9] - CLOSE.\n");
 
         char option = getchar();
         fflush(stdin);
         if (option == '3') {
             printContactBook(book);
+
         } else if (option == '2') {
-            char fName[100];
-            char lName[100];
+            char fName[100]; char lName[100];
             printf("First name: ");
             bc_fgets(fName, 100, stdin);
             printf("Last name: ");
             bc_fgets(lName, 100, stdin);
             deleteContact(book, findContact(book, fName, lName));
             printf("%s %s deleted from contacts.\n", fName, lName);
+
         } else if (option == '1') {
-            char fName[100];
-            char lName[100];
-            char phone[15];
-            char email[50];
+            char fName[100]; char lName[100]; char phone[15]; char email[50];
             printf("First name: ");
             bc_fgets(fName, 100, stdin);
             printf("Last name: ");
@@ -230,12 +257,30 @@ int main() {
             bc_fgets(email, 50, stdin);
             addContact(book, createContact(fName, lName, phone, email));
             printf("%s %s added to contacts.\n", fName, lName);
+
+        } else if (option == '4') {
+            char filename[100];
+            printf("Filename: ");
+            bc_fgets(filename, 100, stdin);
+            int res = saveContactBook(book, filename);
+            if (res == 0) printf("Your contacts were saved to file %s.\n", filename);
+            else printf("Couldn't save your contacts to file.\n");
+
+        } else if (option == '5') {
+            char filename[100];
+            printf("Filename: ");
+            bc_fgets(filename, 100, stdin);
+            deleteContactBook(book);
+            book = loadContactBook(filename);
+            if (book == NULL) printf("Your contacts couldn't be loaded from %s.\n", filename);
+            else printf("Your contacts were loaded successfuly.\n");
+            
         } else if (option == '9') {
             break;
         }
     }
 
-    deleteContactBook(book);
-
+    saveContactBook(book, "test.txt");
+    if (book != NULL) deleteContactBook(book);
     return 0;
 }
